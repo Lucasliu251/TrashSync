@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrashSync - 屏幕共享房间</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="setup-container" class="center-content">
+        <h1>进入屏幕共享房间</h1>
+        <div class="input-group">
+            <input type="text" id="roomIdInput" placeholder="请输入房间号 (如: work)">
+            <button id="joinBtn">进入房间</button>
+        </div>
+    </div>
+
+    <div id="main-container" class="hidden">
+        <header>
+            <div class="header-left">
+                <span id="room-info">房间: <strong id="display-room-id"></strong></span>
+                <div id="network-stats" class="network-stats">
+                    <span>↑ <small id="upload-speed">0 KB/s</small></span>
+                    <span>↓ <small id="download-speed">0 KB/s</small></span>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="toggleMicBtn" class="secondary">开启麦克风</button>
+                <button id="toggleShareBtn">开始共享屏幕</button>
+                <button id="leaveBtn" class="danger">离开房间</button>
+            </div>
+        </header>
+        
+        <div id="video-grid" class="video-grid">
+            <!-- 自己的画面容器 -->
+            <div id="local-video-container" class="video-item">
+                <div class="placeholder">
+                    <span>你目前未共享</span>
+                </div>
+                <video id="localVideo" autoplay playsinline muted></video>
+                <div class="label">我 (本地)</div>
+            </div>
+            <!-- 远程画面将动态插入这里 -->
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
