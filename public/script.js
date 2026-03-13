@@ -36,6 +36,38 @@ joinBtn.onclick = () => {
 
 leaveBtn.onclick = () => location.reload();
 
+// --- 性能优化核心函数 ---
+async function applyPerformanceSettings(p) {
+    if (!p || !p.pc) return;
+    
+    const senders = p.pc.getSenders();
+    for (const sender of senders) {
+        if (sender.track && sender.track.kind === 'video') {
+            // 1. 设置内容提示为 'motion'
+            if ('contentHint' in sender.track) {
+                sender.track.contentHint = 'motion';
+            }
+
+            // 2. 强制维持帧率
+            try {
+                await sender.setDegradationPreference('maintain-framerate');
+            } catch (e) { console.warn('无法设置降级偏好:', e); }
+
+            // 3. 突破码率上限至 15Mbps (15,000,000 bps)
+            const params = sender.getParameters();
+            if (!params.encodings) params.encodings = [{}];
+            
+            params.encodings[0].maxBitrate = 15 * 1000 * 1000; 
+            params.encodings[0].scaleResolutionDownBy = 1.0; // 禁止分辨率缩放
+            
+            try {
+                await sender.setParameters(params);
+                console.log('🚀 已应用 15Mbps 极速码率与无缩放高清设置');
+            } catch (e) { console.warn('无法应用码率参数:', e); }
+        }
+    }
+}
+
 // --- 麦克风逻辑 ---
 toggleMicBtn.onclick = async () => {
     if (micStream) {
@@ -66,9 +98,7 @@ function stopMic() {
     if (micStream) {
         micStream.getTracks().forEach(t => t.stop());
         Object.values(peers).forEach(p => {
-            if (p.senders.mic) {
-                p.senders.mic.replaceTrack(null);
-            }
+            if (p.senders.mic) p.senders.mic.replaceTrack(null);
         });
         micStream = null;
     }
@@ -87,19 +117,18 @@ toggleShareBtn.onclick = async () => {
 
 async function startSharing() {
     try {
-        // 请求视频 + 屏幕音频
+        // 【优化】更激进的采集约束
         screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: { frameRate: { ideal: 30 } }, 
+            video: { 
+                frameRate: { ideal: 60, max: 120 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                resizeMode: 'none', // 禁止浏览器预缩放
+                cursor: "always"
+            }, 
             audio: true 
         });
         
-        const audioTracks = screenStream.getAudioTracks();
-        if (audioTracks.length > 0) {
-            console.log('✅ 成功捕获屏幕音轨:', audioTracks[0].label);
-        } else {
-            console.warn('⚠️ 未捕获到屏幕音轨。提示：共享“整个屏幕”或“标签页”时请勾选“共享音频”复选框。');
-        }
-
         localVideo.srcObject = screenStream;
         localContainer.classList.add('sharing');
         toggleShareBtn.innerText = '停止共享屏幕';
@@ -107,7 +136,7 @@ async function startSharing() {
 
         screenStream.getVideoTracks()[0].onended = () => stopSharing();
 
-        Object.values(peers).forEach(p => {
+        Object.values(peers).forEach(async p => {
             screenStream.getTracks().forEach(track => {
                 if (track.kind === 'video') {
                     p.senders.video = p.pc.addTrack(track, screenStream);
@@ -115,6 +144,7 @@ async function startSharing() {
                     p.senders.screenAudio = p.pc.addTrack(track, screenStream);
                 }
             });
+            await applyPerformanceSettings(p);
         });
 
         socket.emit('update-status', { roomId: currentRoomId, isSharing: true });
@@ -159,22 +189,16 @@ function createPeerConnection(userId) {
     };
 
     pc.ontrack = (e) => {
-        console.log(`Received ${e.track.kind} track from: ${userId}`);
         const remoteVideo = document.getElementById(`video-${userId}`);
         const container = document.getElementById(`container-${userId}`);
-        
-        // 将收到的轨道添加到该用户的持久流中
         peerObj.remoteStream.addTrack(e.track);
         
-        // 【关键修复】重新绑定 srcObject 并强制播放，确保新加入的音轨（如屏幕声音）生效
-        remoteVideo.srcObject = null;
-        remoteVideo.srcObject = peerObj.remoteStream;
-        
-        remoteVideo.play().catch(err => console.warn('自动播放失败:', err));
-
-        if (e.track.kind === 'video') {
-            container.classList.add('sharing');
+        if (remoteVideo.srcObject !== peerObj.remoteStream) {
+            remoteVideo.srcObject = peerObj.remoteStream;
         }
+        
+        remoteVideo.play().catch(() => {});
+        if (e.track.kind === 'video') container.classList.add('sharing');
     };
 
     return peerObj;
@@ -191,6 +215,8 @@ socket.on('user-connected', async (userId) => {
     if (micStream) {
         p.senders.mic = p.pc.addTrack(micStream.getAudioTracks()[0], micStream);
     }
+    await applyPerformanceSettings(p);
+
     setTimeout(async () => {
         if (p.pc.signalingState === 'stable' && Object.keys(p.senders).length === 0) {
             const offer = await p.pc.createOffer();
@@ -219,8 +245,10 @@ socket.on('signal', async (data) => {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             socket.emit('signal', { to: from, signal: pc.localDescription });
+            await applyPerformanceSettings(p);
         } else if (signal.type === 'answer') {
             await pc.setRemoteDescription(new RTCSessionDescription(signal));
+            await applyPerformanceSettings(p);
         } else if (signal.candidate) {
             await pc.addIceCandidate(new RTCIceCandidate(signal));
         }
