@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrashSync - 屏幕共享房间</title>
+    <title>TrashSync - 屏幕共享房间 v0.3</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,28 +19,47 @@
         <header>
             <div class="header-left">
                 <span id="room-info">房间: <strong id="display-room-id"></strong></span>
-                <div id="network-stats" class="network-stats">
+                <div class="network-stats">
                     <span>↑ <small id="upload-speed">0 KB/s</small></span>
                     <span>↓ <small id="download-speed">0 KB/s</small></span>
                 </div>
             </div>
+            
+            <div class="header-middle">
+                <!-- STUN 切换器 -->
+                <select id="stunSelect" class="styled-select">
+                    <option value="aliyun">阿里云 (推荐)</option>
+                    <option value="tencent">腾讯云</option>
+                    <option value="google">Google (国外)</option>
+                </select>
+                <!-- 画质切换器 -->
+                <select id="qualitySelect" class="styled-select">
+                    <option value="1080p60">1080p / 60fps</option>
+                    <option value="1080p120">1080p / 120fps</option>
+                    <option value="720p30">720p / 30fps</option>
+                    <option value="4k60">4K / 60fps (极高码率)</option>
+                </select>
+            </div>
+
             <div class="controls">
                 <button id="toggleMicBtn" class="secondary">开启麦克风</button>
                 <button id="toggleShareBtn">开始共享屏幕</button>
-                <button id="leaveBtn" class="danger">离开房间</button>
+                <button id="leaveBtn" class="danger">离开</button>
             </div>
         </header>
         
         <div id="video-grid" class="video-grid">
             <!-- 自己的画面容器 -->
             <div id="local-video-container" class="video-item">
-                <div class="placeholder">
-                    <span>你目前未共享</span>
-                </div>
+                <div class="placeholder"><span>你目前未共享</span></div>
                 <video id="localVideo" autoplay playsinline muted></video>
                 <div class="label">我 (本地)</div>
+                <div class="video-controls">
+                    <button class="icon-btn mute-btn" title="静音">🔇</button>
+                    <button class="icon-btn fullscreen-btn" title="全屏">⛶</button>
+                </div>
+                <span id="local-fps" class="fps-counter">0 FPS</span>
             </div>
-            <!-- 远程画面将动态插入这里 -->
         </div>
     </div>
 
