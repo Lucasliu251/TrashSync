@@ -182,6 +182,19 @@ function createPeerConnection(userId) {
     createRemoteVideoElement(userId);
     setupVideoControls(`container-${userId}`, `video-${userId}`);
 
+    // 【新增】监听连接状态，检测 NAT 失败
+    pc.oniceconnectionstatechange = () => {
+        const warningEl = document.getElementById('connection-warning');
+        console.log(`ICE Connection State with ${userId}:`, pc.iceConnectionState);
+        
+        if (pc.iceConnectionState === 'failed') {
+            warningEl.classList.remove('hidden');
+        } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            // 如果有一个连接成功了，就隐藏警告（或者保持，取决于你的需求，这里选择隐藏）
+            warningEl.classList.add('hidden');
+        }
+    };
+
     pc.onnegotiationneeded = async () => {
         try {
             const offer = await pc.createOffer();

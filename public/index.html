@@ -16,6 +16,13 @@
     </div>
 
     <div id="main-container" class="hidden">
+        <!-- NAT 失败提示横幅 -->
+        <div id="connection-warning" class="warning-banner hidden">
+            ⚠️ <strong>P2P 连接失败 (NAT 穿透失败)</strong><br>
+            检测到当前网络环境受限，STUN 无法打通隧道。请尝试在终端执行：<br>
+            <code>export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890</code>
+        </div>
+
         <header>
             <div class="header-left">
                 <span id="room-info">房间: <strong id="display-room-id"></strong></span>
